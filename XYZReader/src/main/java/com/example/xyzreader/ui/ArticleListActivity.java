@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.view.ViewCompat;
@@ -45,6 +46,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = ArticleListActivity.class.toString();
+    public static final String ADAPTER_POSITION = "adapter_position_key";
     private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
@@ -150,7 +152,25 @@ public class ArticleListActivity extends AppCompatActivity implements
                     Intent intent = new Intent(Intent.ACTION_VIEW,
                                                ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
 
-                    startActivity(intent);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && view != null)
+                    {
+                        String transitionName = getString(R.string.transition_photo_name) + vh.getAdapterPosition();
+
+                        Bundle transitionBundle = ActivityOptionsCompat
+                                .makeSceneTransitionAnimation(
+                                        ArticleListActivity.this,
+                                        vh.thumbnailView,
+                                        transitionName)
+                                .toBundle();
+
+                        intent.putExtra(ADAPTER_POSITION, vh.getAdapterPosition());
+
+                        startActivity(intent, transitionBundle);
+                    }
+                    else
+                    {
+                        startActivity(intent);
+                    }
                 }
             });
             return vh;
