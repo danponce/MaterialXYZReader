@@ -96,7 +96,7 @@
                     android:id="@+id/more_btn"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="end"
+                    android:layout_gravity="start"
                     android:text="@string/more"/>
 
             </com.example.xyzreader.ui.MaxWidthLinearLayout>
