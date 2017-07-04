@@ -110,7 +110,6 @@
                 android:layout_marginBottom="@dimen/activity_vertical_margin"
                 android:layout_marginTop="@dimen/activity_vertical_margin"
                 android:paddingTop="@dimen/activity_vertical_margin"
-                android:textColorLink="@android:color/holo_blue_light"
                 android:lineSpacingMultiplier="@fraction/detail_body_line_spacing_multiplier" />
         </LinearLayout>
 
@@ -126,6 +125,7 @@
         android:contentDescription="@string/action_share"
         android:clickable="true"
         app:elevation="@dimen/fab_elevation"
+        app:pressedTranslationZ="@dimen/fab_press_translation_z"
         app:layout_anchor="@id/appbar"
         app:layout_anchorGravity="bottom|end" />
 
