@@ -25,7 +25,8 @@
         </activity>
         <activity
             android:name=".ui.ArticleDetailActivity"
-            android:parentActivityName=".ui.ArticleListActivity">
+            android:parentActivityName=".ui.ArticleListActivity"
+            android:label="@string/empty_activity_label">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
 

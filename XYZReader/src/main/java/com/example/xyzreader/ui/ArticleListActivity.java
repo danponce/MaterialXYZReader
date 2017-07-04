@@ -1,5 +1,6 @@
 package com.example.xyzreader.ui;
 
+import android.app.ActivityOptions;
 import android.app.LoaderManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -9,10 +10,9 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.app.SharedElementCallback;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
@@ -20,10 +20,9 @@ import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
-import android.util.TypedValue;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import com.example.xyzreader.R;
@@ -35,6 +34,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
+import java.util.Map;
 
 /**
  * An activity representing a list of Articles. This activity has different presentations for
@@ -46,7 +47,8 @@ public class ArticleListActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = ArticleListActivity.class.toString();
-    public static final String ADAPTER_POSITION = "adapter_position_key";
+    public static final String ADAPTER_POSITION_START = "adapter_position_start";
+    public static final String ADAPTER_POSITION_CURRENT = "adapter_position_current";
     private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
@@ -57,10 +59,57 @@ public class ArticleListActivity extends AppCompatActivity implements
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
+    private Bundle mEnterStateBundle;
+
+    @SuppressWarnings("NewApi")
+    private final SharedElementCallback mCallback = new SharedElementCallback() {
+        @Override
+        public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
+            if (mEnterStateBundle != null) {
+                int startingPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_START);
+                int currentPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_CURRENT );
+                if (startingPosition != currentPosition) {
+                    // If startingPosition != currentPosition the user must have swiped to a
+                    // different page in the DetailsActivity. We must update the shared element
+                    // so that the correct one falls into place.
+                    String newTransitionName = getString(R.string.transition_photo_name ) + currentPosition;
+                    Log.v(TAG,newTransitionName);
+                    View child = mRecyclerView.getLayoutManager().findViewByPosition(currentPosition);
+                    View newSharedElement = child.findViewById(R.id.thumbnail);
+                    if (newSharedElement != null) {
+                        names.clear();
+                        names.add(newTransitionName);
+                        sharedElements.clear();
+                        sharedElements.put(newTransitionName, newSharedElement);
+                    }
+                }
+
+                mEnterStateBundle = null;
+            } else {
+                // If mEnterStateBundle is null, then the activity is exiting.
+                View navigationBar = findViewById(android.R.id.navigationBarBackground);
+                View statusBar = findViewById(android.R.id.statusBarBackground);
+                if (navigationBar != null) {
+                    names.add(navigationBar.getTransitionName());
+                    sharedElements.put(navigationBar.getTransitionName(), navigationBar);
+                }
+                if (statusBar != null) {
+                    names.add(statusBar.getTransitionName());
+                    sharedElements.put(statusBar.getTransitionName(), statusBar);
+                }
+            }
+        }
+    };
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            setExitSharedElementCallback(mCallback);
+        }
 
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
 
@@ -124,6 +173,33 @@ public class ArticleListActivity extends AppCompatActivity implements
     }
 
     @Override
+    public void onActivityReenter(int requestCode, Intent data) {
+        super.onActivityReenter(requestCode, data);
+        mEnterStateBundle = new Bundle(data.getExtras());
+        int startingPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_START);
+        int currentPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_CURRENT);
+        if (startingPosition != currentPosition) {
+            mRecyclerView.scrollToPosition(currentPosition);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            postponeEnterTransition();
+            mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+                @Override
+                public boolean onPreDraw() {
+                    mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        mRecyclerView.requestLayout();
+                        startPostponedEnterTransition();
+                        return true;
+                    }
+                    return false;
+                }
+            });
+        }
+    }
+
+    @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         mRecyclerView.setAdapter(null);
     }
@@ -152,18 +228,15 @@ public class ArticleListActivity extends AppCompatActivity implements
                     Intent intent = new Intent(Intent.ACTION_VIEW,
                                                ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && view != null)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                     {
-                        String transitionName = getString(R.string.transition_photo_name) + vh.getAdapterPosition();
+                        String transitionName = ViewCompat.getTransitionName(vh.thumbnailView);
 
-                        Bundle transitionBundle = ActivityOptionsCompat
-                                .makeSceneTransitionAnimation(
-                                        ArticleListActivity.this,
-                                        vh.thumbnailView,
-                                        transitionName)
-                                .toBundle();
+                        Bundle transitionBundle = ActivityOptions.makeSceneTransitionAnimation(ArticleListActivity.this,
+                                                                                               vh.thumbnailView,
+                                                                                               transitionName).toBundle();
 
-                        intent.putExtra(ADAPTER_POSITION, vh.getAdapterPosition());
+                        intent.putExtra(ADAPTER_POSITION_START, vh.getAdapterPosition());
 
                         startActivity(intent, transitionBundle);
                     }
@@ -211,6 +284,15 @@ public class ArticleListActivity extends AppCompatActivity implements
                     mCursor.getString(ArticleLoader.Query.THUMB_URL),
                     ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
             holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && holder.thumbnailView != null)
+            {
+                String transitionName = getString(R.string.transition_photo_name) + position;
+
+                Log.i("transition", transitionName);
+
+                ViewCompat.setTransitionName(holder.thumbnailView, transitionName);
+            }
         }
 
         @Override

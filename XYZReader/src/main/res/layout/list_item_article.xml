@@ -11,6 +11,7 @@
     android:foreground="?selectableItemBackground">
 
     <LinearLayout
+        android:id="@+id/item_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
@@ -21,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/photo_placeholder"
-            android:scaleType="center"/>
+            android:scaleType="centerCrop"/>
 
         <TextView
             android:id="@+id/article_title"
@@ -44,7 +45,7 @@
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
             android:paddingBottom="16dp"
-            android:textColor="@color/blue_grey_400"
+            android:textColor="@color/blue_grey_500"
             android:maxLines="2"
             android:ellipsize="end" />
     </LinearLayout>

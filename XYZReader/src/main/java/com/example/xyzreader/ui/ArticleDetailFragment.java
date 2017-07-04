@@ -18,11 +18,16 @@ import java.util.GregorianCalendar;
 
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.ShareCompat;
 import android.support.v4.view.ViewCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.graphics.Palette;
 import android.support.v7.widget.AppCompatButton;
+import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
@@ -67,6 +72,9 @@ public class ArticleDetailFragment extends Fragment implements
     private boolean mIsCard = false;
     private int mStatusBarFullOpacityBottom;
 
+    private int mAdapterCurrentPosition;
+    private int mAdapterStartingPosition;
+
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
     private SimpleDateFormat outputFormat = new SimpleDateFormat();
@@ -82,11 +90,12 @@ public class ArticleDetailFragment extends Fragment implements
     public ArticleDetailFragment() {
     }
 
-    public static ArticleDetailFragment newInstance(long itemId, int adapterPosition) {
+    public static ArticleDetailFragment newInstance(long itemId, int adapterPosition, int adapterStartPosition) {
         Bundle arguments = new Bundle();
         arguments.putLong(ARG_ITEM_ID, itemId);
+        arguments.putInt(ArticleListActivity.ADAPTER_POSITION_CURRENT, adapterPosition);
+        arguments.putInt(ArticleListActivity.ADAPTER_POSITION_START, adapterStartPosition);
         ArticleDetailFragment fragment = new ArticleDetailFragment();
-        fragment.mAdapterPosition = adapterPosition;
         fragment.setArguments(arguments);
         return fragment;
     }
@@ -99,6 +108,8 @@ public class ArticleDetailFragment extends Fragment implements
             mItemId = getArguments().getLong(ARG_ITEM_ID);
         }
 
+        mAdapterStartingPosition = getArguments().getInt(ArticleListActivity.ADAPTER_POSITION_START);
+        mAdapterCurrentPosition = getArguments().getInt(ArticleListActivity.ADAPTER_POSITION_CURRENT);
         mIsCard = getResources().getBoolean(R.bool.detail_is_card);
         mStatusBarFullOpacityBottom = getResources().getDimensionPixelSize(
                 R.dimen.detail_card_top_margin);
@@ -123,8 +134,8 @@ public class ArticleDetailFragment extends Fragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
-        mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
-        mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
+        mRootView = inflater.inflate(R.layout.fragment_article, container, false);
+        /*mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
                 mRootView.findViewById(R.id.draw_insets_frame_layout);
         mDrawInsetsFrameLayout.setOnInsetsCallback(new DrawInsetsFrameLayout.OnInsetsCallback() {
             @Override
@@ -142,14 +153,45 @@ public class ArticleDetailFragment extends Fragment implements
                 mPhotoContainerView.setTranslationY((int) (mScrollY - mScrollY / PARALLAX_FACTOR));
                 updateStatusBar();
             }
-        });
+        });*/
 
         mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
 
-        String transitionName = getString(R.string.transition_photo_name) + mAdapterPosition;
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            mPhotoView.setTransitionName(transitionName);
+
+            String transitionName = getString(R.string.transition_photo_name) + mAdapterCurrentPosition;
+
+            Log.i("transition set fragment", transitionName);
+
+            //setting the shared content transition on photoview
+            ViewCompat.setTransitionName(mPhotoView, transitionName);
+        }
+
+        Toolbar detailToolbar = (Toolbar) mRootView.findViewById(R.id.detail_toolbar);
+        getActivityCast().setSupportActionBar(detailToolbar);
+
+        detailToolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Respond to the action bar's Up/Home button
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    getActivity().finishAfterTransition();
+                } else {
+                    getActivity().finish();
+                }
+            }
+        });
+
+        mStatusBarColorDrawable = new ColorDrawable(0);
+
+        CollapsingToolbarLayout collapsingToolbar= (CollapsingToolbarLayout) mRootView.findViewById(R.id.toolbar);
+        collapsingToolbar.setTitle("");
+
+        ActionBar actionBar = getActivityCast().getSupportActionBar();
+        if (actionBar!=null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
         mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
@@ -166,12 +208,28 @@ public class ArticleDetailFragment extends Fragment implements
             }
         });
 
-        bindViews();
-        updateStatusBar();
+        //updateStatusBar();
         return mRootView;
     }
 
-    private void updateStatusBar() {
+    /**
+     * Returns the shared item to ArticleListActivity. Returns null if the view is not in the container
+     */
+    @Nullable
+    ImageView getArticleImage() {
+        if (isViewInContainer(getActivity().getWindow().getDecorView(), mPhotoView)) {
+            return mPhotoView;
+        }
+        return null;
+    }
+
+    private static boolean isViewInContainer(@NonNull View container, @NonNull View view) {
+        Rect containerBounds = new Rect();
+        container.getHitRect(containerBounds);
+        return view.getLocalVisibleRect(containerBounds);
+    }
+
+    /*private void updateStatusBar() {
         int color = 0;
         if (mPhotoView != null && mTopInset != 0 && mScrollY > 0) {
             float f = progress(mScrollY,
@@ -198,7 +256,7 @@ public class ArticleDetailFragment extends Fragment implements
         } else {
             return val;
         }
-    }
+    }*/
 
     private Date parsePublishedDate() {
         try {
@@ -220,7 +278,7 @@ public class ArticleDetailFragment extends Fragment implements
         TextView bylineView = (TextView) mRootView.findViewById(R.id.article_byline);
         bylineView.setMovementMethod(new LinkMovementMethod());
         TextView bodyView = (TextView) mRootView.findViewById(R.id.article_body);
-        AppCompatButton moreButton = (AppCompatButton) mRootView.findViewById(R.id.more_btn);
+        //AppCompatButton moreButton = (AppCompatButton) mRootView.findViewById(R.id.more_btn);
 
         bodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rosario-Regular.ttf"));
 
@@ -228,6 +286,8 @@ public class ArticleDetailFragment extends Fragment implements
             mRootView.setAlpha(0);
             mRootView.setVisibility(View.VISIBLE);
             mRootView.animate().alpha(1);
+            Log.i("transition title", mCursor.getString(ArticleLoader.Query.TITLE));
+            Log.i("transition current position", "" + mAdapterCurrentPosition);
             titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
             if (!publishedDate.before(START_OF_EPOCH.getTime())) {
@@ -250,7 +310,7 @@ public class ArticleDetailFragment extends Fragment implements
             }
             final String bodyText = mCursor.getString(ArticleLoader.Query.BODY);
 
-            moreButton.setOnClickListener(new View.OnClickListener()
+            /*moreButton.setOnClickListener(new View.OnClickListener()
             {
                 @Override
                 public void onClick(View view)
@@ -260,7 +320,7 @@ public class ArticleDetailFragment extends Fragment implements
 
                     startActivity(intent);
                 }
-            });
+            });*/
 
             bodyView.setText(Html.fromHtml(bodyText.replaceAll("(\r\n|\n)", "<br />")));
             ImageLoaderHelper.getInstance(getActivity()).getImageLoader()
@@ -274,7 +334,7 @@ public class ArticleDetailFragment extends Fragment implements
                                 mPhotoView.setImageBitmap(imageContainer.getBitmap());
                                 mRootView.findViewById(R.id.meta_bar)
                                         .setBackgroundColor(mMutedColor);
-                                updateStatusBar();
+                                //updateStatusBar();
                             }
                         }
 
@@ -315,8 +375,18 @@ public class ArticleDetailFragment extends Fragment implements
 
         bindViews();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getActivity().startPostponedEnterTransition();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+        {
+            mPhotoView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener()
+            {
+                @Override
+                public boolean onPreDraw()
+                {
+                    mPhotoView.getViewTreeObserver().removeOnPreDrawListener(this);
+                    ActivityCompat.startPostponedEnterTransition(getActivity());
+                    return true;
+                }
+            });
         }
     }
 
@@ -326,7 +396,7 @@ public class ArticleDetailFragment extends Fragment implements
         bindViews();
     }
 
-    public int getUpButtonFloor() {
+    /*public int getUpButtonFloor() {
         if (mPhotoContainerView == null || mPhotoView.getHeight() == 0) {
             return Integer.MAX_VALUE;
         }
@@ -335,5 +405,5 @@ public class ArticleDetailFragment extends Fragment implements
         return mIsCard
                 ? (int) mPhotoContainerView.getTranslationY() + mPhotoView.getHeight() - mScrollY
                 : mPhotoView.getHeight() - mScrollY;
-    }
+    }*/
 }
