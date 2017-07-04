@@ -286,8 +286,10 @@ public class ArticleDetailFragment extends Fragment implements
             mRootView.setAlpha(0);
             mRootView.setVisibility(View.VISIBLE);
             mRootView.animate().alpha(1);
+
             Log.i("transition title", mCursor.getString(ArticleLoader.Query.TITLE));
-            Log.i("transition current position", "" + mAdapterCurrentPosition);
+            Log.i("transition current", "" + mAdapterCurrentPosition);
+
             titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
             if (!publishedDate.before(START_OF_EPOCH.getTime())) {

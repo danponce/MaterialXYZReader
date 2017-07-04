@@ -94,12 +94,18 @@ public class ArticleDetailActivity extends AppCompatActivity
 
         mAdapterStartingPosition = getIntent().getIntExtra(ArticleListActivity.ADAPTER_POSITION_START, 0);
 
-        if (savedInstanceState == null) {
-            if (getIntent() != null && getIntent().getData() != null) {
+        if (savedInstanceState == null)
+        {
+            if (getIntent() != null && getIntent().getData() != null)
+            {
                 mStartId = ItemsContract.Items.getItemId(getIntent().getData());
+                mSelectedItemId = mStartId;
             }
+
             mAdapterCurrentPosition = mAdapterStartingPosition;
-        }else{
+        }
+        else
+        {
             mStartId = savedInstanceState.getLong(ITEM_ID);
             mAdapterCurrentPosition = savedInstanceState.getInt(ArticleListActivity.ADAPTER_POSITION_CURRENT);
         }
@@ -107,6 +113,20 @@ public class ArticleDetailActivity extends AppCompatActivity
         setContentView(R.layout.activity_article_detail);
 
         getLoaderManager().initLoader(0, null, this);
+
+        mPagerAdapter = new MyPagerAdapter(getFragmentManager());
+        mPager = (ViewPager) findViewById(R.id.pager);
+        mPager.setAdapter(mPagerAdapter);
+        mPager.setCurrentItem(mAdapterCurrentPosition);
+        mPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
+            @Override
+            public void onPageSelected(int position) {
+                if (mCursor != null) {
+                    mCursor.moveToPosition(position);
+                    mAdapterCurrentPosition = position;
+                }
+            }
+        });
 
         /*mPagerAdapter = new MyPagerAdapter(getFragmentManager());
         mPager = (ViewPager) findViewById(R.id.pager);
@@ -134,20 +154,6 @@ public class ArticleDetailActivity extends AppCompatActivity
             }
         });*/
 
-        mPagerAdapter = new MyPagerAdapter(getFragmentManager());
-        mPager = (ViewPager) findViewById(R.id.pager);
-        mPager.setAdapter(mPagerAdapter);
-        mPager.setCurrentItem(mAdapterCurrentPosition);
-        mPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
-            @Override
-            public void onPageSelected(int position) {
-                if (mCursor != null) {
-                    mCursor.moveToPosition(position);
-                    mAdapterCurrentPosition = position;
-                }
-            }
-        });
-
         /*mUpButtonContainer = findViewById(R.id.up_container);
 
         mUpButton = findViewById(R.id.action_up);
@@ -170,13 +176,6 @@ public class ArticleDetailActivity extends AppCompatActivity
                 }
             });
         }*/
-
-        if (savedInstanceState == null) {
-            if (getIntent() != null && getIntent().getData() != null) {
-                mStartId = ItemsContract.Items.getItemId(getIntent().getData());
-                mSelectedItemId = mStartId;
-            }
-        }
     }
 
     @Override

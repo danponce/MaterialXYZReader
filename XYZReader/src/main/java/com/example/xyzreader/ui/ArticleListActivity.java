@@ -65,35 +65,52 @@ public class ArticleListActivity extends AppCompatActivity implements
     private final SharedElementCallback mCallback = new SharedElementCallback() {
         @Override
         public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
-            if (mEnterStateBundle != null) {
-                int startingPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_START);
-                int currentPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_CURRENT );
-                if (startingPosition != currentPosition) {
-                    // If startingPosition != currentPosition the user must have swiped to a
-                    // different page in the DetailsActivity. We must update the shared element
-                    // so that the correct one falls into place.
-                    String newTransitionName = getString(R.string.transition_photo_name ) + currentPosition;
-                    Log.v(TAG,newTransitionName);
-                    View child = mRecyclerView.getLayoutManager().findViewByPosition(currentPosition);
-                    View newSharedElement = child.findViewById(R.id.thumbnail);
-                    if (newSharedElement != null) {
+            if (mEnterStateBundle != null)
+            {
+                int adapterStartPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_START);
+                int adapterCurrentPosition = mEnterStateBundle.getInt(ADAPTER_POSITION_CURRENT);
+
+                // If the positions are different it means that the pager element has been changed in the ArticleDetailsActivity
+                if (adapterStartPosition != adapterCurrentPosition)
+                {
+                    String transitionName = getString(R.string.transition_photo_name ) + adapterCurrentPosition;
+
+                    View child = mRecyclerView.getLayoutManager().findViewByPosition(adapterCurrentPosition);
+
+                    if(child == null)
+                        return;
+
+                    View sharedElement = child.findViewById(R.id.thumbnail);
+
+                    if (sharedElement != null)
+                    {
                         names.clear();
-                        names.add(newTransitionName);
+                        // Add the new transition name
+                        names.add(transitionName);
+
+
                         sharedElements.clear();
-                        sharedElements.put(newTransitionName, newSharedElement);
+
+                        // Set the new transition name and the shared element
+                        sharedElements.put(transitionName, sharedElement);
                     }
                 }
 
                 mEnterStateBundle = null;
-            } else {
-                // If mEnterStateBundle is null, then the activity is exiting.
+            }
+            else
+            {
                 View navigationBar = findViewById(android.R.id.navigationBarBackground);
                 View statusBar = findViewById(android.R.id.statusBarBackground);
-                if (navigationBar != null) {
+
+                if (navigationBar != null)
+                {
                     names.add(navigationBar.getTransitionName());
                     sharedElements.put(navigationBar.getTransitionName(), navigationBar);
                 }
-                if (statusBar != null) {
+
+                if (statusBar != null)
+                {
                     names.add(statusBar.getTransitionName());
                     sharedElements.put(statusBar.getTransitionName(), statusBar);
                 }
