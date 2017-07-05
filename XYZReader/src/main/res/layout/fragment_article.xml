@@ -124,8 +124,6 @@
         android:src="@drawable/ic_share"
         android:contentDescription="@string/action_share"
         android:clickable="true"
-        app:elevation="@dimen/fab_elevation"
-        app:pressedTranslationZ="@dimen/fab_press_translation_z"
         app:layout_anchor="@id/appbar"
         app:layout_anchorGravity="bottom|end" />
 
